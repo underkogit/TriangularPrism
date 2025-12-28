@@ -2,6 +2,8 @@
 
 Short: adds Shift+A → Mesh → "Add Triangular Prism (with horizontal bevel)" and creates a triangular prism with an optional horizontal bevel.
 
+![enter image description here](assets/view.gif)
+
 ## Features
 
 -  Creates a triangular prism with configurable width, height, and depth.
