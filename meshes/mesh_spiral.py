@@ -8,7 +8,7 @@ class MESH_OT_add_spiral(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     spiral_name: bpy.props.StringProperty(name="Name", default="SpiralOnly")
-    radius: bpy.props.FloatProperty(name="Radius", default=20.0, min=0.01)
+    radius: bpy.props.FloatProperty(name="Radius", default=10.0, min=0.01)
     pitch: bpy.props.FloatProperty(name="Pitch", default=7.0, min=0.0)
     turns: bpy.props.IntProperty(name="Turns", default=5, min=1)
     points_per_turn: bpy.props.IntProperty(
@@ -19,6 +19,10 @@ class MESH_OT_add_spiral(bpy.types.Operator):
     bevel_depth: bpy.props.FloatProperty(
         name="Bevel Depth", default=2.0, min=0.0)
     squeeze: bpy.props.IntProperty(name="Squeeze", default=0, min=0, max=100)
+    squeeze_length: bpy.props.FloatProperty(
+        name="Squeeze Length (%)", default=10.0, min=0.0, max=50.0,
+        description="Length percentage at each end to apply squeeze (0-50%)"
+    )
 
     def execute(self, context):
         create_spiral(
@@ -30,7 +34,8 @@ class MESH_OT_add_spiral(bpy.types.Operator):
             start_phase=self.start_phase,
             bevel_resolution=self.bevel_resolution,
             bevel_depth=self.bevel_depth,
-            squeeze=self.squeeze
+            squeeze=self.squeeze,
+            squeeze_length=self.squeeze_length,
         )
         return {'FINISHED'}
 
@@ -48,6 +53,7 @@ class MESH_OT_add_spiral(bpy.types.Operator):
         layout.prop(self, "bevel_resolution")
         layout.prop(self, "bevel_depth")
         layout.prop(self, "squeeze")
+        layout.prop(self, "squeeze_length")
 
 
 def menu_func_spiral(self, context):
@@ -64,37 +70,43 @@ def create_spiral(
     bevel_resolution=1,
     bevel_depth=2,
     squeeze=0,
+    squeeze_length=10.0,  # проценты длины на каждом конце
 ):
     curve_data = bpy.data.curves.new(name + "_curve", type='CURVE')
     curve_data.dimensions = '3D'
     spline = curve_data.splines.new('POLY')
 
     steps_per_turn = max(3, int(points_per_turn))
-    total_steps = int(steps_per_turn * max(1, int(turns)))
+    total_turns = max(1, int(turns))
+    total_steps = int(steps_per_turn * total_turns)
     total_points = total_steps + 1
     spline.points.add(total_points - 1)
 
-    # предрасчёт смещения фазы
     phase_rad = radians(start_phase)
 
-    for i in range(total_points):
-        t = i / total_steps  # от 0.0 до 1.0
-        angle = 2 * pi * (t * turns) + phase_rad
-        z = t * (pitch * turns)
+    # Ограничиваем squeeze_length (в процентах одного конца) до [0,50]
+    s_len = max(0.0, min(50.0, float(squeeze_length))) / 100.0
+    s_amount = max(0.0, min(1.0, float(squeeze) / 100.0))
 
-        # squeeze: сужаем на начале и в конце
-        # целевая минимальная шкала в середине сужаемой области = 1 - squeeze/100
-        s = squeeze / 100.0
-        if s <= 0.0:
+    for i in range(total_points):
+        t = i / total_steps  # 0..1 по длине кривой
+        angle = 2 * pi * (t * total_turns) + phase_rad
+        z = t * (pitch * total_turns)
+
+        if s_amount <= 0.0 or s_len <= 0.0:
             squeeze_factor = 1.0
         else:
-            # расстояние до ближайшего конца (в нормированном [0,1])
-            dist_to_end = min(t, 1.0 - t)
-            # ширина зоны сужения — половина кривой (0..0.5). Можно изменить при желании.
-            # нормализуем dist_to_end в диапазон 0..1 на интервале [0, 0.5]
-            norm = min(1.0, dist_to_end / 0.5)
-            # на концах norm ~0 => фактор = 1 - s ; в центре norm ~1 => фактор = 1.0
-            squeeze_factor = (1.0 - s) + s * norm
+            # начало: t in [0, s_len] -> factor от (1 - s_amount) до 1
+            # конец: t in [1-s_len, 1] -> factor от 1 to (1 - s_amount)
+            if t <= s_len:
+                # нормализуем в 0..1 (0 на краю, 1 у границы зоны)
+                norm = t / s_len if s_len > 0 else 1.0
+                squeeze_factor = (1.0 - s_amount) + s_amount * norm
+            elif t >= 1.0 - s_len:
+                norm = (1.0 - t) / s_len if s_len > 0 else 1.0
+                squeeze_factor = (1.0 - s_amount) + s_amount * norm
+            else:
+                squeeze_factor = 1.0
 
         x = radius * squeeze_factor * cos(angle)
         y = radius * squeeze_factor * sin(angle)

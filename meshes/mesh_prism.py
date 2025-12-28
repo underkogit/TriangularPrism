@@ -9,13 +9,13 @@ class MESH_OT_add_prism(bpy.types.Operator):
     bl_label = "Add Triangular Prism (with horizontal bevel)"
     bl_options = {'REGISTER', 'UNDO'}
 
-    width: bpy.props.FloatProperty(name="Width", default=2.0, min=0.01)
-    height: bpy.props.FloatProperty(name="Height", default=1.732, min=0.01)
-    depth: bpy.props.FloatProperty(name="Depth", default=2.0, min=0.01)
+    width: bpy.props.FloatProperty(name="Width", default=10, min=0.01)
+    height: bpy.props.FloatProperty(name="Height", default=10, min=0.01)
+    depth: bpy.props.FloatProperty(name="Depth", default=5, min=0.01)
     bevel_amount: bpy.props.FloatProperty(
         name="Bevel Amount", default=0.2, min=0.0)
     bevel_segments: bpy.props.IntProperty(
-        name="Bevel Segments", default=3, min=0, max=8)
+        name="Bevel Segments", default=3, min=0, max=20)
     enter_editmode: bpy.props.BoolProperty(
         name="Enter Edit Mode", default=False)
 
