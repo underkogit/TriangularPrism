@@ -14,7 +14,7 @@
 import sys
 import bpy
 from .meshes.mesh_prism import *
-
+from .meshes.mesh_box import *
 from . import auto_load
 bl_info = {
     "name": "Add Mesh: Triangular Prism + Menu",
@@ -27,21 +27,25 @@ bl_info = {
 }
 auto_load.init()
 
-classes = (MESH_OT_add_prism,)
+classes = (MESH_OT_add_prism, MESH_OT_add_box)
 
 
 def register():
     auto_load.register()
+
     print("auto_load.register")
     for fcls in classes:
         bpy.utils.register_class(fcls)
-    bpy.types.VIEW3D_MT_mesh_add.append(menu_func)
+    bpy.types.VIEW3D_MT_mesh_add.append(menu_func_prism)
+    bpy.types.VIEW3D_MT_mesh_add.append(menu_func_box)
 
 
 def unregister():
     auto_load.unregister()
+
     print("auto_load.unregister")
-    bpy.types.VIEW3D_MT_mesh_add.remove(menu_func)
+    bpy.types.VIEW3D_MT_mesh_add.remove(menu_func_prism)
+    bpy.types.VIEW3D_MT_mesh_add.remove(menu_func_box)
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
 
